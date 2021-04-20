@@ -1,0 +1,23 @@
+FROM alpine
+LABEL maintainer="mtjo_00@163.com"
+ENV FRP_VERSION 0.30.0
+RUN apk update && apk add tzdata && \
+	cp -r -f /usr/share/zoneinfo/PRC /etc/localtime && \
+	sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories && \
+	apk update && \
+	apk add --no-cache curl bash && \
+    cd /bin && curl https://i.jpillora.com/webproc|bash && \
+    cd /tmp && \
+    wget https://github.com/fatedier/frp/releases/download/v${FRP_VERSION}/frp_${FRP_VERSION}_linux_amd64.tar.gz && \
+    tar -xf frp_${FRP_VERSION}_linux_amd64.tar.gz && \
+    cp frp_${FRP_VERSION}_linux_amd64/frps /bin/ && \
+    cp frp_${FRP_VERSION}_linux_amd64/frps_full.ini /etc/ && \
+# Clean APK cache
+	apk del curl bash && \
+ 	rm -rf /var/cache/apk/* /tmp/* 
+ 	
+ENTRYPOINT ["webproc"]
+CMD ["-c","/etc/frps_full.ini", "frps","-c","/etc/frps_full.ini"]
+EXPOSE 7000
+EXPOSE 7500
+EXPOSE 8080
