@@ -1,11 +1,11 @@
 FROM alpine
-LABEL maintainer="mtjo_00@163.com"
-ENV FRP_VERSION 0.30.0
-RUN apk update && apk add tzdata && \
+LABEL maintainer="mtjo@qq.com"
+ARG FRP_VERSION 0.30.0 
+ENV FRP_VERSION $FRP_VERSION
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories && \ 
+    apk update && apk add tzdata && \
 	cp -r -f /usr/share/zoneinfo/PRC /etc/localtime && \
-	sed -i 's/dl-cdn.alpinelinux.org/mirrors.tuna.tsinghua.edu.cn/g' /etc/apk/repositories && \
-	apk update && \
-	apk add --no-cache curl bash && \
+	apk add --update --virtual .build-deps curl bash && \
     cd /bin && curl https://i.jpillora.com/webproc|bash && \
     cd /tmp && \
     wget https://github.com/fatedier/frp/releases/download/v${FRP_VERSION}/frp_${FRP_VERSION}_linux_amd64.tar.gz && \
@@ -13,7 +13,8 @@ RUN apk update && apk add tzdata && \
     cp frp_${FRP_VERSION}_linux_amd64/frpc /bin/ && \
     cp frp_${FRP_VERSION}_linux_amd64/frpc.ini /etc/ && \
 # Clean APK cache
-	apk del curl bash && \
+    apk del --purge .build-deps && \
+    rm -rf /var/cache/apk/* && \
  	rm -rf /var/cache/apk/* /tmp/* 
  	
 ENTRYPOINT ["webproc"]
