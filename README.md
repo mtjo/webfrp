@@ -30,7 +30,7 @@ docker run -itd -p 8080:8080 \
 			    -p 7400:7400 \
 			    -e "HTTP_USER=admin" \
 			    -e "HTTP_PASS=admin" \
-			    --restart=always \ 
+			    --restart=always \
 			    --name frpc \
 			    mtjo/frp:frpc-v0.36.2
 ```
