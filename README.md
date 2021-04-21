@@ -52,3 +52,5 @@ docker build -f DockerfileFrps --build-arg FRP_VERSION="0.36.2" -t mtjo/frp:frps
 ```
 docker build -f DockerfileFrpc --build-arg FRP_VERSION="0.36.2" -t mtjo/frp:frpc-v0.36.2 .
 ```
+
+webui 使用的是[webproc](https://github.com/jpillora/webproc) 感谢 jpillora
