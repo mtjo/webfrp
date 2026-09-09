@@ -63,6 +63,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      # 从 GitHub secret 传递到 job 环境变量
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+      DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -71,11 +75,11 @@ jobs:
 
       # Docker Hub 登录：仅当配置了 DOCKER_USERNAME / DOCKER_TOKEN secret 时生效
       - name: Login to Docker Hub
-        if: secrets.DOCKER_USERNAME != '' && secrets.DOCKER_TOKEN != ''
+        if: env.DOCKER_USERNAME != '' && env.DOCKER_TOKEN != ''
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_TOKEN }}
+          username: ${{ env.DOCKER_USERNAME }}
+          password: ${{ env.DOCKER_TOKEN }}
 
       - name: Build frps image
         uses: docker/build-push-action@v5
@@ -88,7 +92,7 @@ jobs:
           tags: |
             ${{ env.IMAGE_PREFIX }}:frps-v${{ needs.get-version.outputs.version }}
             ${{ env.IMAGE_PREFIX }}:frps-latest
-          push: ${{ github.event_name != 'pull_request' && secrets.DOCKER_USERNAME != '' && secrets.DOCKER_TOKEN != '' }}
+          push: ${{ github.event_name != 'pull_request' && env.DOCKER_USERNAME != '' && env.DOCKER_TOKEN != '' }}
 
       - name: Build frpc image
         uses: docker/build-push-action@v5
@@ -101,7 +105,7 @@ jobs:
           tags: |
             ${{ env.IMAGE_PREFIX }}:frpc-v${{ needs.get-version.outputs.version }}
             ${{ env.IMAGE_PREFIX }}:frpc-latest
-          push: ${{ github.event_name != 'pull_request' && secrets.DOCKER_USERNAME != '' && secrets.DOCKER_TOKEN != '' }}
+          push: ${{ github.event_name != 'pull_request' && env.DOCKER_USERNAME != '' && env.DOCKER_TOKEN != '' }}
 
       - name: Output image digests
         run: |
