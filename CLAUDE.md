@@ -4,6 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 常用开发命令
 
+### 从 Docker Hub 拉取镜像
+```bash
+# 拉取最新版 frps（amd64 / arm64 自动适配）
+docker pull mtjo/frp:frps-latest
+
+# 拉取最新版 frpc（amd64 / arm64 自动适配）
+docker pull mtjo/frp:frpc-latest
+
+# 拉取指定版本
+docker pull mtjo/frp:frps-v0.71.0
+docker pull mtjo/frp:frpc-v0.71.0
+```
+
 ### 构建 Docker 镜像
 ```bash
 # 构建 frps（服务端）镜像
