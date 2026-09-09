@@ -11,7 +11,8 @@ RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositorie
     wget https://github.com/fatedier/frp/releases/download/v${FRP_VERSION}/frp_${FRP_VERSION}_linux_amd64.tar.gz && \
     tar -xf frp_${FRP_VERSION}_linux_amd64.tar.gz && \
     cp frp_${FRP_VERSION}_linux_amd64/frps /bin/ && \
-    cp frp_${FRP_VERSION}_linux_amd64/frps_full.ini /etc/ && \
+    #cp frp_${FRP_VERSION}_linux_amd64/frps_full.ini /etc/ && \
+    wget https://github.com/fatedier/frp/raw/dev/conf/frps_full_example.toml -O /etc/frps_full.ini && \
 # Clean APK cache
     apk del --purge .build-deps && \
     rm -rf /var/cache/apk/* && \

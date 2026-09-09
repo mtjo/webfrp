@@ -1,20 +1,109 @@
-name: Docker Image CI
+name: Build & Publish FRP Docker Images
 
 on:
   push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
+    tags:
+      - 'v*'              # 触发：推送版本标签（如 v0.71.0）
+  schedule:
+    - cron: '0 0 * * *'   # 每天 UTC 00:00 自动检查最新版
+  workflow_dispatch:
+    inputs:
+      frp_version:
+        description: '指定 FRP 版本（不带 v 前缀），留空则自动获取最新 Release'
+        required: false
+        type: string
+
+env:
+  # 镜像仓库前缀（可根据需要修改为 ghcr.io/${{ github.repository }} 或 docker.io/your-namespace）
+  IMAGE_PREFIX: docker.io/mtjo/frp
+  # 构建平台（当前 Dockerfile 只下载 amd64 二进制，先只支持 amd64）
+  PLATFORMS: linux/amd64
 
 jobs:
-
-  build:
-
+  # 1️⃣ 获取要构建的 FRP 版本号
+  get-version:
+    name: Determine FRP version
     runs-on: ubuntu-latest
-
+    outputs:
+      version: ${{ steps.set-version.outputs.version }}
     steps:
-    - uses: actions/checkout@v4
-    - name: Build the Docker image
-      run: docker build . --file DockerfileFrps --tag my-image-name:$(date +%s)
-    - name: Build the Docker image2
-      run: docker build . -f DockerfileFrps --build-arg FRP_VERSION="0.71.0" -t mtjo/frp:frps-v0.71.0     
+      - name: 从推送的 tag 获取版本号
+        id: from-tag
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        run: |
+          TAG=${GITHUB_REF#refs/tags/v}
+          echo "version=$TAG" >> $GITHUB_OUTPUT
+
+      - name: 从 workflow 输入获取版本号
+        id: from-input
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.frp_version != ''
+        run: |
+          echo "version=${{ github.event.inputs.frp_version }}" >> $GITHUB_OUTPUT
+
+      - name: 通过 GitHub API 获取最新 Release
+        id: from-api
+        if: steps.from-tag.outputs.version == '' && steps.from-input.outputs.version == ''
+        run: |
+          LATEST=$(curl -s https://api.github.com/repos/fatedier/frp/releases/latest \
+            | grep '"tag_name":' \
+            | sed -E 's/.*"v?([^"]+)".*/\1/')
+          echo "version=$LATEST" >> $GITHUB_OUTPUT
+
+      - name: 汇总最终版本号
+        id: set-version
+        run: |
+          VERSION="${{ steps.from-tag.outputs.version || steps.from-input.outputs.version || steps.from-api.outputs.version }}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "检测到要构建的 FRP 版本：$VERSION"
+
+  # 2️⃣ 构建并推送镜像
+  build-and-push:
+    name: Build & Push
+    needs: get-version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Docker Hub 登录：仅当配置了 DOCKER_USERNAME / DOCKER_TOKEN secret 时生效
+      - name: Login to Docker Hub
+        if: secrets.DOCKER_USERNAME != '' && secrets.DOCKER_TOKEN != ''
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Build frps image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: DockerfileFrps
+          platforms: ${{ env.PLATFORMS }}
+          build-args: |
+            FRP_VERSION=${{ needs.get-version.outputs.version }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}:frps-v${{ needs.get-version.outputs.version }}
+            ${{ env.IMAGE_PREFIX }}:frps-latest
+          push: ${{ github.event_name != 'pull_request' && secrets.DOCKER_USERNAME != '' && secrets.DOCKER_TOKEN != '' }}
+
+      - name: Build frpc image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: DockerfileFrpc
+          platforms: ${{ env.PLATFORMS }}
+          build-args: |
+            FRP_VERSION=${{ needs.get-version.outputs.version }}
+          tags: |
+            ${{ env.IMAGE_PREFIX }}:frpc-v${{ needs.get-version.outputs.version }}
+            ${{ env.IMAGE_PREFIX }}:frpc-latest
+          push: ${{ github.event_name != 'pull_request' && secrets.DOCKER_USERNAME != '' && secrets.DOCKER_TOKEN != '' }}
+
+      - name: Output image digests
+        run: |
+          echo "frps: ${{ env.IMAGE_PREFIX }}:frps-v${{ needs.get-version.outputs.version }}"
+          echo "frpc: ${{ env.IMAGE_PREFIX }}:frpc-v${{ needs.get-version.outputs.version }}"
