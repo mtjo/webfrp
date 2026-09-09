@@ -16,8 +16,8 @@ on:
 env:
   # 镜像仓库前缀（可根据需要修改为 ghcr.io/${{ github.repository }} 或 docker.io/your-namespace）
   IMAGE_PREFIX: docker.io/mtjo/frp
-  # 构建平台（当前 Dockerfile 只下载 amd64 二进制，先只支持 amd64）
-  PLATFORMS: linux/amd64
+  # 构建平台（Dockerfile 内通过 TARGETARCH 支持 amd64 与 arm64）
+  PLATFORMS: linux/amd64,linux/arm64
 
 jobs:
   # 1️⃣ 获取要构建的 FRP 版本号

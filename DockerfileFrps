@@ -1,23 +1,29 @@
 FROM alpine
 LABEL maintainer="mtjo@qq.com"
-ARG FRP_VERSION 0.30.0 
+ARG FRP_VERSION 0.30.0
+ARG TARGETARCH
 ENV FRP_VERSION $FRP_VERSION
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories && \ 
+RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories && \
     apk update && apk add tzdata && \
-	cp -r -f /usr/share/zoneinfo/PRC /etc/localtime && \
-	apk update && \apk add --update --virtual .build-deps curl bash && \
+    cp -r -f /usr/share/zoneinfo/PRC /etc/localtime && \
+    apk add --update --virtual .build-deps curl bash && \
     cd /bin && curl https://i.jpillora.com/webproc|bash && \
     cd /tmp && \
-    wget https://github.com/fatedier/frp/releases/download/v${FRP_VERSION}/frp_${FRP_VERSION}_linux_amd64.tar.gz && \
-    tar -xf frp_${FRP_VERSION}_linux_amd64.tar.gz && \
-    cp frp_${FRP_VERSION}_linux_amd64/frps /bin/ && \
+    case "$TARGETARCH" in \
+      amd64) FRP_ARCH=amd64 ;; \
+      arm64) FRP_ARCH=arm64 ;; \
+      *) FRP_ARCH=amd64 ;; \
+    esac && \
+    wget https://github.com/fatedier/frp/releases/download/v${FRP_VERSION}/frp_${FRP_VERSION}_linux_${FRP_ARCH}.tar.gz && \
+    tar -xf frp_${FRP_VERSION}_linux_${FRP_ARCH}.tar.gz && \
+    cp frp_${FRP_VERSION}_linux_${FRP_ARCH}/frps /bin/ && \
     #cp frp_${FRP_VERSION}_linux_amd64/frps_full.ini /etc/ && \
     wget https://github.com/fatedier/frp/raw/dev/conf/frps_full_example.toml -O /etc/frps_full.ini && \
 # Clean APK cache
     apk del --purge .build-deps && \
     rm -rf /var/cache/apk/* && \
-    rm -rf /var/cache/apk/* /tmp/* 
- 	
+    rm -rf /var/cache/apk/* /tmp/*
+
 ENTRYPOINT ["webproc"]
 CMD ["-c","/etc/frps_full.ini", "frps","-c","/etc/frps_full.ini"]
 EXPOSE 7000
